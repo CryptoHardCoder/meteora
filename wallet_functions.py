@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict
+from loguru import logger
 
 from playwright.async_api import BrowserContext, Page, expect
 
@@ -7,11 +7,36 @@ from functions import find_page
 from setting import keyword_wallet, url_jup
 
 
-async def get_balance_in_page(page: Page, step: int, token_name: str, stable_coin: str = 'USDT') -> Dict:
-    """ Функция работает только на странице: meteora/dlmm, где добавления позиции и свапа, для получения подсвечиваемых
-                 доступных балансов, ориентируясь от них дальше будем либо свапат, либо открывать позицию.
-            Значение {step} - для правильного парсинга и составления конечного словаря с балансом используется.
-                На странице add position step = 2, а на странице swap step = 1, так как они по разному отражаются"""
+async def get_balance_in_page(page: Page, step: int, token_name: str, stable_coin: str = 'USDT') -> dict:
+    """
+    Получает информацию о доступных балансах на странице 'meteora/dlmm'.
+
+    Эта функция используется для извлечения информации о подсвеченных доступных балансах на странице добавления позиции или свапа.
+    Значение параметра `step` определяет, как именно будут извлекаться данные, в зависимости от того,
+    на какой странице вы находитесь (например, для добавления позиции или для свапа).
+
+    Параметры:
+    ----------
+    page : Page
+        Объект страницы Playwright, на которой будет производиться извлечение данных.
+
+    step : int
+        Значение, определяющее текущий шаг.
+        - На странице добавления позиции `step` = 2.
+        - На странице свапа `step` = 1.
+
+    token_name : str
+        Название токена, для которого необходимо получить информацию о балансе.
+
+    stable_coin : str, optional
+        Название стабильной монеты, по умолчанию 'USDT'. Используется для сравнения с доступными балансами.
+
+    Returns:
+    --------
+    dict
+        Словарь, содержащий информацию о доступных балансах, ключами которого являются названия токенов,
+        а значениями - соответствующие балансы. Структура словаря зависит от значения параметра `step`.
+    """
 
     await asyncio.sleep(1)
     lines = (await page.locator('form').nth(0).inner_text()).split('\n')
@@ -46,14 +71,13 @@ async def confirm_transaction(context: BrowserContext) -> bool:
                 break
 
     if await wallet_page.locator('h3:has-text("Укажите пароль")').is_visible():
-        solflare = wallet_page.get_by_placeholder("Пароль")
-        await solflare.type(keyword_wallet)
+        await wallet_page.get_by_placeholder("Пароль").type(keyword_wallet)
         await wallet_page.locator('button:has-text("Разблокировать")').click()
 
     if (await wallet_page.locator('h4:has-text("Simulation failed")').is_visible() or
             await wallet_page.locator('h4:has-text("Slippage tolerance exceeded")').is_visible()):
         await wallet_page.locator('button:has-text("Отклонить")').click()
-        print('Транзакцию отклонил, не показывал что и сколько меняем')
+        logger.error('Транзакцию отклонил, не показывал что и сколько меняем')
         return False
     await expect(wallet_page.locator('button:has-text("Утвердить")')).to_be_visible()
     await wallet_page.locator('button:has-text("Утвердить")').click()
@@ -63,7 +87,7 @@ async def confirm_transaction(context: BrowserContext) -> bool:
 
 async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare') -> bool:
     # print('Подключаем кошелек')
-    await asyncio.sleep(1)
+    context.expect_page()
     wallet_page: Page = await find_page(title_name, context)
 
     try:
@@ -81,15 +105,15 @@ async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare') 
             # print('Успешно ввели пароль от кошелька')
 
     except Exception as e:
-        print(f'Ошибка при вводе пароля: {e}')
+        logger.error(f'Ошибка при вводе пароля: {e}')
         return False
     return True
 
 
-async def get_balance_in_wallet(page: Page, context: BrowserContext) -> Dict:
+async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
     """ Функция получает баланс на странице: Jup.ag. Работает только для трех монет: SOL, USDT, JLP.
                 На прямую с кошелька не берет баланс. Возвращает словарь. """
-    print('Получаем баланс через сайт jup.ag')
+    logger.info('Получаем баланс через сайт jup.ag')
 
     url = page.url
 

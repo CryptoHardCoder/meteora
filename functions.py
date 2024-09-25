@@ -1,8 +1,8 @@
 import asyncio
-from typing import Dict
 
 import requests
 from playwright.async_api import Page, BrowserContext
+from loguru import logger
 
 from setting import adspower_api_url, adspower_api_key
 
@@ -15,7 +15,8 @@ async def smooth_scroll_with_mouse(page: Page, distance: int = 700, speed: int =
 
 
 async def find_page(title_name: str, context: BrowserContext) -> Page | None:
-    await asyncio.sleep(2)
+    # await asyncio.sleep(2)
+    context.expect_event('page')
     pages = context.pages
     result_pages = []
     result_page: Page | None = None
@@ -35,7 +36,7 @@ async def find_page(title_name: str, context: BrowserContext) -> Page | None:
     return result_page
 
 
-async def get_profile_data(private_key: str) -> Dict:
+async def get_profile_data(private_key: str) -> dict:
     """Запрашивает и возвращает данные профиля в виде словаря."""
     response = requests.get(adspower_api_url, params={
         "user_id": private_key,
@@ -45,6 +46,7 @@ async def get_profile_data(private_key: str) -> Dict:
     # print(data)
 
     if data["code"] != 0:
+        logger.error(f"Не удалось получить данные профиля: {data['msg']}")
         raise Exception(f"Не удалось получить данные профиля: {data['msg']}")
 
     return data

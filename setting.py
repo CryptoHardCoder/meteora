@@ -1,4 +1,5 @@
 import random
+from loguru import logger
 
 from fake_useragent import FakeUserAgent
 
@@ -7,9 +8,10 @@ adspower_api_url = "скопированный url сюда вставляем/a
 
 adspower_api_key = "ваш API KEY от ADSPOWER"
 
-private_key = "ваш API KEY от ПРОФИЛЯ "
+private_key = "ваш Private Key от ПРОФИЛЯ "
 
 keyword_wallet = 'пароль от кошелька'
+
 
 usdt_swap_value_to_sol: float = 0  # !!! Нельзя оставлять пустым !!! либо '0', либо ваше значение
 
@@ -26,4 +28,7 @@ headers = {
     'user-agent': FakeUserAgent().random
 }
 url_jup = 'https://jup.ag/'
+
+logger.add('logs.log', rotation='1 day', level='INFO')
+
 
