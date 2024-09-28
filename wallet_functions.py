@@ -1,13 +1,11 @@
 import asyncio
-from loguru import logger
-
-from playwright.async_api import BrowserContext, Page, expect
 
 from functions import find_page
-from setting import keyword_wallet, url_jup
+from playwright.async_api import BrowserContext, Page, expect
+from setting import keyword_wallet, url_jup, logger
 
 
-async def get_balance_in_page(page: Page, step: int, token_name: str, stable_coin: str = 'USDT') -> dict:
+async def get_balance_in_page_jlp(page: Page, step: int, token_name: str, stable_coin: str = 'USDT') -> dict:
     """
     Получает информацию о доступных балансах на странице 'meteora/dlmm'.
 
@@ -38,7 +36,7 @@ async def get_balance_in_page(page: Page, step: int, token_name: str, stable_coi
         а значениями - соответствующие балансы. Структура словаря зависит от значения параметра `step`.
     """
 
-    await asyncio.sleep(1)
+    # await asyncio.sleep(1)
     lines = (await page.locator('form').nth(0).inner_text()).split('\n')
     # print(lines)
     swap_data = {
@@ -60,45 +58,57 @@ async def get_balance_in_page(page: Page, step: int, token_name: str, stable_coi
     return swap_data
 
 
-async def confirm_transaction(context: BrowserContext) -> bool:
-    wallet_page: Page = await find_page('Solflare', context)
+async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'chrome-extension://') -> bool:
+    wallet_page: Page = await find_page(context, 'Solflare', keyword_in_url)
 
     if wallet_page is None:  # иногда не сразу появляется кошелек, для этого небольшой цикл написал
         for _ in range(3):
             await asyncio.sleep(5)
-            wallet_page: Page = await find_page('Solflare', context)
+            wallet_page: Page = await find_page(context, 'Solflare', keyword_in_url)
             if wallet_page is not None:
                 break
-
-    if await wallet_page.locator('h3:has-text("Укажите пароль")').is_visible():
+    await wallet_page.wait_for_load_state('domcontentloaded')
+    if await wallet_page.locator('h4:has-text("Укажите пароль")').is_visible():
         await wallet_page.get_by_placeholder("Пароль").type(keyword_wallet)
         await wallet_page.locator('button:has-text("Разблокировать")').click()
 
-    if (await wallet_page.locator('h4:has-text("Simulation failed")').is_visible() or
-            await wallet_page.locator('h4:has-text("Slippage tolerance exceeded")').is_visible()):
+    if (
+            await wallet_page.locator('h5:has-text("Simulation failed")').is_visible() or
+            await wallet_page.locator('h5:has-text("Slippage tolerance exceeded")').is_visible()
+    ):
         await wallet_page.locator('button:has-text("Отклонить")').click()
-        logger.error('Транзакцию отклонил, не показывал что и сколько меняем')
+        logger.error('Транзакцию отклонил, не удалось получить симуляцию, пробуем через 10сек')
         return False
-    await expect(wallet_page.locator('button:has-text("Утвердить")')).to_be_visible()
-    await wallet_page.locator('button:has-text("Утвердить")').click()
 
-    return True
+    try:
+        await expect(wallet_page.locator('button:has-text("Утвердить")')).to_be_enabled(timeout=20000)
+        await wallet_page.locator('button:has-text("Утвердить")').click()
+        return True
+    except AssertionError:
+        # await wallet_page.locator('button:has-text("Отклонить")').click()
+        logger.error('Транзакцию отклонил, не доступна была кнопка "Утвердить", пробуем через 10сек')
+        return False
+
+    # await expect(wallet_page.locator('button:has-text("Утвердить")')).to_be_enabled(timeout=20000)
+    # await wallet_page.locator('button:has-text("Утвердить")').click()
+
+    # return True
 
 
-async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare') -> bool:
+async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare',
+                         keyword_in_url: str = 'chrome-extension://') -> bool:
     # print('Подключаем кошелек')
-    context.expect_page()
-    wallet_page: Page = await find_page(title_name, context)
+    # await asyncio.sleep(2)
+    wallet_page: Page = await find_page(context, title_name, keyword_in_url)
+    # print(wallet_page)
 
     try:
         if await wallet_page.locator('button:has-text("Подключиться")').is_visible():
-            # print('Без пароля коннектимся')
             await wallet_page.locator('button:has-text("Подключиться")').click(click_count=2)  # иногда с одного клика
             # не срабатывает "подключиться"
         else:
             # print('С вводом пароля коннектимся')
-            solflare = wallet_page.get_by_placeholder("Пароль")
-            await solflare.type(keyword_wallet)
+            await wallet_page.get_by_placeholder("Пароль").type(keyword_wallet)
             await wallet_page.locator('button:has-text("Разблокировать")').click()
             await expect(wallet_page.locator('button:has-text("Подключиться")')).to_be_visible()
             await wallet_page.locator('button:has-text("Подключиться")').click(click_count=2)
@@ -115,21 +125,14 @@ async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
                 На прямую с кошелька не берет баланс. Возвращает словарь. """
     logger.info('Получаем баланс через сайт jup.ag')
 
-    url = page.url
-
-    if url != url_jup:
+    if page.url != url_jup:
+        page = await context.new_page()
         await page.goto(url_jup)
-
-    if await page.get_by_role("button", name="Connect Wallet").is_visible():
-        await page.locator('button:has-text("Connect Wallet")').click()
-        await page.locator('button:has-text("Solflare")').click()
-        await connect_wallet(context)
-
-    await page.wait_for_load_state()
-    await expect(page.get_by_alt_text('Wallet logo')).to_be_visible()
-    location_menu = await page.get_by_alt_text('Wallet logo').nth(1).bounding_box()
-    await page.get_by_alt_text('Wallet logo').nth(1).click()
-    await page.locator('span:has-text("Your Tokens")').click()
+    try:
+        location_menu = await jup_connect_wallet(context, page, button_index=0)
+    except AssertionError as e:
+        logger.error(f'Словили ошибку:{e}. Пробуем индексы менять')
+        location_menu = await jup_connect_wallet(context, page, button_index=1)
 
     # путь селектора 'Your tokens' содержащий баланс
     data = (await page.locator('//*[@id="__next"]/div[2]/div[1]/div/'
@@ -157,6 +160,21 @@ async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
                 balance_wallet['USDT'] = balance_value
     print(balance_wallet)
     await page.mouse.click(location_menu['x'], location_menu['y'])  # нажимаем в меню чтобы скрыт вкладку
-    await page.close()
+    # await page.close()
 
     return balance_wallet
+
+
+async def jup_connect_wallet(context, page: Page, button_index: int):
+    if await page.locator('button:has-text("Connect Wallet")').nth(button_index).is_visible():
+        await page.locator('button:has-text("Connect Wallet")').nth(button_index).click()
+        await page.locator('span:has-text("Solflare")').click(click_count=2)
+        await connect_wallet(context)
+
+    await page.wait_for_load_state()
+    await expect(page.get_by_alt_text('Wallet logo').nth(button_index)).to_be_visible()
+    location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
+    await page.get_by_alt_text('Wallet logo').nth(button_index).click()
+    await page.locator('span:has-text("Your Tokens")').click()
+
+    return location_menu

@@ -1,29 +1,33 @@
 import asyncio
-from loguru import logger
-from playwright.async_api import BrowserContext, Page, expect
 
 from functions import smooth_scroll_with_mouse, find_page
-from setting import usdt_swap_value_to_jlp, max_procent, min_procent
-from wallet_functions import connect_wallet, get_balance_in_page, confirm_transaction
+from playwright.async_api import BrowserContext, Page
+from setting import usdt_swap_value_to_jlp, max_procent, min_procent, logger, page_jlp
+from wallet_functions import connect_wallet, get_balance_in_page_jlp, confirm_transaction
 
 
 async def choose_pool(context: BrowserContext, pool_name: str = 'JLP-USDT') -> None:
-    # context.expect_event('page')
-    page: Page = await find_page('Home | Meteora', context)
-    # await page.wait_for_load_state()
+    page: Page = context.pages[-1]
 
-    if page is None:
-        page = await context.new_page()
-        await page.goto('https://app.meteora.ag/dlmm')
-        await page.wait_for_load_state()
-    else:
+    if await page.locator('a:has-text("DLMM")').is_visible():
         await page.locator('a:has-text("DLMM")').click()
+
+    if await page.get_by_alt_text('menu').is_visible():
+        await page.get_by_alt_text('menu').click()
+        if await page.locator('span:has-text("DLMM")').is_visible():
+            await page.locator('span:has-text("DLMM")').click()
+        else:
+            await page.get_by_alt_text('menu').click()
+
+    if await page.locator('button:has-text("Refresh")').is_visible():
+        await page.locator('button:has-text("Refresh")').click()
 
     if await page.locator('button', has_text='Connecting...').nth(0).is_visible():
         await connect_wallet(context=context)
 
     elif await page.locator('button', has_text='Connect Wallet').nth(0).is_visible():
         await page.locator('button', has_text='Connect Wallet').nth(0).click()
+        # context.expect_event()
         await page.locator('button:has-text("Solflare")').click()
         await connect_wallet(context=context)
 
@@ -43,19 +47,22 @@ async def choose_pool(context: BrowserContext, pool_name: str = 'JLP-USDT') -> N
 async def chek_position(context: BrowserContext) -> float | None:
     """ Функция проверяет на наличие открытой позиции. Если есть открытая позиция, то возвращает (float) актуальную цену.
                                         Если нет, возвращает None"""
-    context.expect_event('page')
     logger.info('Проверка на наличие открытой позиции')
-    page: Page = await find_page('JLP-USDT | Meteora', context)
-    await page.wait_for_load_state()
+    try:
+        page: Page = context.pages[-1]
+    except IndexError:
+        page: Page = await find_page(context, keyword_in_url='dlmm')
+
+    if page.url != page_jlp:
+        await page.goto(page_jlp)
 
     await smooth_scroll_with_mouse(page, distance=300, speed=150)
 
     if await page.locator('span', has_text='Not connected').is_visible():
-        await page.reload()
-        await page.wait_for_load_state()
+        await page.locator('span:has-text("Connect Wallet")').nth(1).click()
+        await page.locator('button:has-text("Solflare")').click()
         await connect_wallet(context=context)
 
-    await page.wait_for_load_state()
     if await page.locator('span:has-text("Loading...")').is_visible():
         while await page.locator('span:has-text("Loading...")').is_visible():
             await page.reload()
@@ -70,30 +77,56 @@ async def chek_position(context: BrowserContext) -> float | None:
         logger.warning('На сайте увидел "WARNING". Расхождение цены очень большая')
         return None
 
-    await page.locator('span:has-text("Your Positions")').click()
-    if await page.locator('span:has-text("Price Range")').is_visible():
+    await page.locator('span:has-text("Your Positions")').nth(0).click()
+    if await page.locator('span:has-text("USDT per JLP")').is_visible():
         logger.info('У вас уже есть  открытая позиция')
         buttons = await page.locator('button').all_inner_texts()  # актуальный курс вытаскиваем
+        # spans = await page.locator('span').all_inner_texts()  # рейдж цены открытой позиции
+        # # spans = set(spans)
+        # price_range = None
+        # for i in range(len(spans)):
+        #     if 'Your Liquidity' in spans[i]:
+        #         price_range = spans[i + 2]
+        # min_price = float(price_range.split('-')[0].strip())
+        # max_price = float(price_range.split('-')[1].strip())
+
+        # print(price_range, max_price, min_price, sep='\n')
+
         buttons_data = list(filter(None, buttons))
-        # print(buttons_data)
         button_with_price: str = buttons_data[1]
-        # print(button_with_price)
         price = button_with_price.split('\n')
-        # print(price)
         current_price = float(price[0])
-        # print(current_price)
+
         return current_price
 
 
-async def swap_in_meteora(context: BrowserContext) -> dict | None:
-    context.expect_event('page')
-    page: Page = await find_page('JLP-USDT | Meteora', context)
-    # await page.wait_for_load_state()
+async def swap_in_meteora(context: BrowserContext, jlp_to_usdt: int = None) -> dict | None:
+    page: Page = context.pages[-1]
+
+    if page.url != page_jlp:
+        await page.goto(page_jlp)
 
     await page.locator('//*[@id="__next"]/div[1]/div[3]/div/div[2]/div/div[2]/'
                        'div[2]/div[1]/div[1]/div[3]/span').click()  # xpath кнопки SWAP
+    await page.locator('button:has-text("Swap")').nth(0).scroll_into_view_if_needed()
 
-    swap_data = await get_balance_in_page(page, 1, 'JLP')
+    if jlp_to_usdt is not None:
+        await page.locator('input').nth(0).click()
+        await page.locator('input').nth(0).type(str({jlp_to_usdt}))
+        await page.locator('button[type="submit"]').click()
+
+        while not await confirm_transaction(context):
+            await page.locator('input').nth(0).click()
+            await page.locator('input').nth(0).type(str({jlp_to_usdt}))
+            await page.locator('button[type="submit"]').click()
+            await page.wait_for_timeout(2000)
+            # await expect(page).to_have_title('Solflare')
+            await confirm_transaction(context)
+            logger.error('Транзакция отклонена, через 10сек попробуем еще раз')
+            await asyncio.sleep(10)
+        return
+
+    swap_data = await get_balance_in_page_jlp(page, 1, 'JLP')
     logger.info(f'Баланс: USDT: {swap_data["USDT"]}, JLP: {swap_data["JLP"]}')
 
     if usdt_swap_value_to_jlp == 0 and swap_data['USDT'] < 1:
@@ -105,45 +138,71 @@ async def swap_in_meteora(context: BrowserContext) -> dict | None:
         await page.wait_for_load_state()
         await page.get_by_role("button", name="switch").click()
         await page.get_by_text("MAX", exact=True).click()
+        await page.locator('button[type="submit"]').click()
+
+        while not await confirm_transaction(context):
+            await page.get_by_text("MAX", exact=True).click()
+            await page.locator('button[type="submit"]').click()
+            await page.wait_for_timeout(2000)
+            # await expect(page).to_have_title('Solflare')
+            await confirm_transaction(context)
+            logger.error('Транзакция отклонена, через 10сек попробуем еще раз')
+            await asyncio.sleep(10)
 
     elif usdt_swap_value_to_jlp > swap_data['USDT']:
         logger.info('Имеем меньше чем вы указали, поэтому свапаем все USDT в JLP')
         await page.wait_for_load_state()
         await page.get_by_role("button", name="switch").click()
         await page.get_by_text("MAX", exact=True).click()
+        await page.locator('button[type="submit"]').click()
+
+        while not await confirm_transaction(context):
+            await page.get_by_text("MAX", exact=True).click()
+            await page.locator('button[type="submit"]').click()
+            await page.wait_for_timeout(2000)
+            # await expect(page).to_have_title('Solflare')
+            await confirm_transaction(context)
+            logger.error('Транзакция отклонена, через 10сек попробуем еще раз')
+            await asyncio.sleep(10)
 
     else:
         logger.info(f'Свапаем указанное вами количество USDT: {usdt_swap_value_to_jlp}')
         await page.get_by_role("button", name="switch").click()
         await page.locator('input').nth(0).click()
         await page.locator('input').nth(0).type(str({usdt_swap_value_to_jlp}))
-
-    await page.locator('button[type="submit"]').click()
-    while not await confirm_transaction(context):
         await page.locator('button[type="submit"]').click()
-        await expect(page).to_have_title('Solflare')
-        await confirm_transaction(context)
-        logger.error('Транзакция отклонена, через 10сек попробуем еще раз')
-        await asyncio.sleep(10)
 
-    await asyncio.sleep(10)
+        while not await confirm_transaction(context):
+            await page.locator('input').nth(0).click()
+            await page.locator('input').nth(0).type(str({usdt_swap_value_to_jlp}))
+            await page.locator('button[type="submit"]').click()
+            await page.wait_for_timeout(2000)
+            # await expect(page).to_have_title('Solflare')
+            await confirm_transaction(context)
+            logger.error('Транзакция отклонена, через 10сек попробуем еще раз')
+            await asyncio.sleep(10)
+
+    await asyncio.sleep(10)  # ждем подгрузки данных, долго подгружаются
 
     return swap_data
 
 
 async def add_position(context: BrowserContext) -> tuple[float, float, float] | None:
-    context.expect_event('page')
-    logger.debug('Зашли в добавление позиции')
-    page: Page = await find_page('JLP-USDT | Meteora', context)
+    logger.info('Зашли в добавление позиции')
+    page: Page = context.pages[-1]
+
+    if page.url != page_jlp:
+        await page.goto(page_jlp)
 
     if await page.get_by_alt_text('warning').is_visible():
-        logger.error('На сайте увидел "WARNING".Раскорреляция цены очень большая,'
-                     ' не будем добавлять ликвидность')
+        logger.warning('На сайте увидел "WARNING".Раскорреляция цены очень большая,'
+                       ' не будем добавлять ликвидность')
         return None
 
     await page.locator('span:has-text("Add Position")').click()
-    add_position_balance = await get_balance_in_page(page, step=2, token_name='JLP')
-    logger.info(f'Контрольная проверка баланса: USDT: {add_position_balance["USDT"]}, JLP: {add_position_balance["JLP"]}')
+    add_position_balance = await get_balance_in_page_jlp(page, step=2, token_name='JLP')
+    logger.info(
+        f'Контрольная проверка баланса: USDT: {add_position_balance["USDT"]}, JLP: {add_position_balance["JLP"]}')
 
     if (add_position_balance['USDT'] and add_position_balance['JLP']) is None:
         logger.error('Не удалось получить баланс')
@@ -157,13 +216,16 @@ async def add_position(context: BrowserContext) -> tuple[float, float, float] | 
         # для заполнения поля
 
         await page.locator('button:has-text("Spot")').get_by_alt_text('Spot').click()
+        await page.locator('button:has-text("Add Liquidity")').scroll_into_view_if_needed()
 
         if await page.locator('button:has-text("Add Liquidity")').is_disabled():
+            await page.get_by_placeholder('0.00').nth(0).scroll_into_view_if_needed()
             await page.get_by_placeholder('0.00').nth(0).clear()
             await page.locator('//*[@id="__next"]/div[1]/div[3]/div/div[2]/div/div[2]/div[2]/div['
                                '2]/form/div[1]/div[1]/div/div/button').click()  # xpath кнопки Auto-fill
             await page.locator(f'span:has-text("{add_position_balance["JLP"]}")').click()  # нажимает на кнопку с
             # балансом для заполнения поля
+            await page.locator('button:has-text("Add Liquidity")').scroll_into_view_if_needed()
 
         await page.locator('div:has-text("Min Price")').locator('input').nth(1).type(min_procent)
 
@@ -193,33 +255,44 @@ async def add_position(context: BrowserContext) -> tuple[float, float, float] | 
 
         while not await confirm_transaction(context):
             await page.locator('button', has_text='Add Liquidity').click()
-            await expect(page).to_have_title('Solflare')
+            await page.wait_for_timeout(2)
+            # await expect(page).to_have_title('Solflare')
             await confirm_transaction(context)
             logger.error('Транзакция отклонена, через 10сек попробуем еще раз')
             await asyncio.sleep(10)
 
-        logger.info('Ликвидность добавлена')
+        logger.info(f'Ликвидность добавлена в рейндже {min_price} - {max_price}')
 
     return open_price, max_price, min_price
 
 
 async def close_position(context: BrowserContext) -> bool:
-    context.expect_event('page')
     logger.info('Зашли в закрытие позиции')
-    page: Page = await find_page('JLP-USDT | Meteora', context)
+    page: Page = context.pages[-1]
+
+    if page.url != page_jlp:
+        await page.goto(page_jlp)
 
     await page.locator('span:has-text("Your Positions")').click()
-    if await page.locator('span:has-text("Price Range")').is_visible():
+    if await page.locator('span:has-text("USDT per JLP")').nth(0).is_visible():
         await smooth_scroll_with_mouse(page, 200, 100)
-        await page.locator('span:has-text("USDT per JLP")').click()
-        await page.get_by_text('Withdraw').click()
+        await page.locator('span:has-text("USDT per JLP")').nth(0).click()
+        await page.get_by_text('Withdraw', exact=True).click()
+        await page.locator('button:has-text("Withdraw & Close Position")').scroll_into_view_if_needed()
         if await page.locator('button:has-text("Withdraw & Close Position")').is_enabled():
             await page.locator('button:has-text("Withdraw & Close Position")').click()
-            await confirm_transaction(context)
+            while not await confirm_transaction(context):
+                await page.get_by_text('Withdraw', exact=True).click()
+                await page.locator('button:has-text("Withdraw & Close Position")').click()
+                await confirm_transaction(context)
         else:
             await page.locator('100%').click()
             await page.locator('button:has-text("Withdraw & Close Position")').click()
-            await confirm_transaction(context)
+            while not await confirm_transaction(context):
+                await page.get_by_text('Withdraw', exact=True).click()
+                await page.locator('button:has-text("Withdraw & Close Position")').click()
+                await confirm_transaction(context)
+
         logger.info('Закрыли позицию')
         return True
     elif await page.locator('span:has-text("No Positions Found")').is_visible():
