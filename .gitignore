@@ -3,6 +3,7 @@ my_keys.py
 run_copia.py
 chek.py
 logs.log
+positions_history
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
