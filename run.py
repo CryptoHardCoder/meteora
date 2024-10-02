@@ -11,7 +11,7 @@ async def main():
     async with async_playwright() as p:
         profile_data = await get_profile_data(private_key=private_key)
         browser = await p.chromium.connect_over_cdp(profile_data['data']['ws']['puppeteer'],
-                                                    slow_mo=1500,
+                                                    slow_mo=1800,
                                                     headers=headers)
         context = browser.contexts[0]
         page = await context.new_page()
@@ -57,14 +57,15 @@ async def main():
 
                     """ниже формула = если цена пойдет в право до половины, то есть поднимется на 95%, 
                                                 бот закрывает позицию """
-                    target_price = open_price + 0.05 * (max_price - open_price)
+                    target_price = open_price + 0.95 * (max_price - open_price)
                     target_price = round(target_price, 4)
                     logger.info(f'Текущая цена:{current_price}')
                     logger.info(f"Позиция закроется при превышении: {target_price} или падении ниже: {open_price}.")
                     # """ниже формула = если цена приближается к минимальной цене на 90% бот закрывает позицию"""
                     # closure_price = min_price + 0.1 * (current_price - min_price)
 
-                    if current_price >= target_price or current_price < open_price:
+                    # if current_price >= target_price or current_price < open_price:
+                    if current_price >= target_price:
                         logger.info("Цена вышла за диапазон. Запущен процесс закрытия позиции")
                         await close_position(context)
 
