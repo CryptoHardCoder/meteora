@@ -151,11 +151,13 @@ async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
     else:
         try:
             await jup_connect_wallet(context, page, button_index=1)
-            location_menu = await get_location_menu(page, button_index=1)
+            # location_menu = await get_location_menu(page, button_index=1)  # когда функция работает по поиску лого
+            location_menu = await get_location_menu(page)  # когда функция работает по xpath
         except AssertionError:
             logger.error(f'Словили ошибку: \nПробуем менять индексы')
             await jup_connect_wallet(context, page, button_index=0)
-            location_menu = await get_location_menu(page, button_index=0)
+            # location_menu = await get_location_menu(page, button_index=0)  # когда функция работает по поиску лого
+            location_menu = await get_location_menu(page)  # когда функция работает по xpath
 
     await page.locator('span:has-text("Your Tokens")').click()
     data = (await page.locator(
@@ -198,17 +200,25 @@ async def jup_connect_wallet(context, page: Page, button_index: int):
         await connect_wallet(context)
 
 
-async def get_location_menu(page: Page, button_index: int):
-    if await page.get_by_alt_text('Wallet logo').nth(button_index).is_visible():
-        # print('if logo')
-        location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
-        # print(location_menu)
-        await page.get_by_alt_text('Wallet logo').nth(button_index).click()
-    else:
-        await expect(page.get_by_alt_text('Wallet logo').nth(button_index)).to_be_visible()
-        # print('else logo')
-        location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
-        await page.get_by_alt_text('Wallet logo').nth(button_index).click()
-        # print(location_menu)
+# async def get_location_menu(page: Page, button_index: int):
+#     if await page.get_by_alt_text('Wallet logo').nth(button_index).is_visible():
+#         # print('if logo')
+#         location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
+#         # print(location_menu)
+#         await page.get_by_alt_text('Wallet logo').nth(button_index).click()
+#     else:
+#         await expect(page.get_by_alt_text('Wallet logo').nth(button_index)).to_be_visible()
+#         # print('else logo')
+#         location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
+#         await page.get_by_alt_text('Wallet logo').nth(button_index).click()
+#         # print(location_menu)
+#
+#     return location_menu
+
+async def get_location_menu(page: Page):
+    location_menu = await page.locator(
+        '//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button/div[3]').bounding_box()  # xpath лого кошелька
+    print(location_menu)
+    await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button/div[3]').click()  # xpath лого кошелька
 
     return location_menu
