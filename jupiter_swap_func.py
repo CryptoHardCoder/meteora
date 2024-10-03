@@ -15,7 +15,7 @@ async def swap_in_jupiter(context: BrowserContext, usdt: bool = False, jlp: bool
     #     page: Page = await context.new_page()
     #     await page.goto(url_jup)
 
-    await page.wait_for_load_state('domcontentloaded')
+    # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
     if (
@@ -59,7 +59,7 @@ async def swap_in_jupiter(context: BrowserContext, usdt: bool = False, jlp: bool
             await page.get_by_placeholder('Search by token or paste address').type('JLP')
             await page.locator('p:has-text("Jupiter Perps")').click()
 
-        await page.wait_for_load_state('domcontentloaded')
+        # await page.wait_for_load_state('domcontentloaded')
         await first_input_place.type('2')
         logger.info(f'USDT для свапа не было, cвапаем 2 JLP в SOL')
 
