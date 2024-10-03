@@ -136,7 +136,7 @@ async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
     if page is None or page.url != url_jup:
         page = await context.new_page()
         await page.goto(url_jup)
-    await page.wait_for_load_state('domcontentloaded')
+    # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
     connect_wallet_button = page.locator('span:has-text("Connect Wallet")').first
@@ -230,7 +230,7 @@ async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'ch
             await asyncio.sleep(5)
             if wallet_page is not None:
                 break
-    await wallet_page.wait_for_load_state('domcontentloaded')
+    # await wallet_page.wait_for_load_state('domcontentloaded')
     await wallet_page.bring_to_front()
 
     if await wallet_page.locator('h4:has-text("Укажите пароль")').is_visible():
@@ -240,7 +240,7 @@ async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'ch
     # cancel_button = wallet_page.locator('button:has-text("Отклонить")')
     submit_button = wallet_page.locator('button:has-text("Утвердить")')
 
-    await wallet_page.wait_for_load_state('domcontentloaded')
+    # await wallet_page.wait_for_load_state('domcontentloaded')
 
     if (
             await wallet_page.locator('h5:has-text("Simulation failed")').is_visible() or
@@ -269,7 +269,7 @@ async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare',
                          keyword_in_url: str = 'chrome-extension://') -> bool:
     # await asyncio.sleep(2)
     wallet_page: Page = await find_page(context, title_name=title_name, keyword_in_url=keyword_in_url)
-    await wallet_page.wait_for_load_state('domcontentloaded')
+    # await wallet_page.wait_for_load_state('domcontentloaded')
     await wallet_page.bring_to_front()
 
     try:

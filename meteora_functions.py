@@ -10,7 +10,7 @@ from wallet_functions import connect_wallet, get_balance_in_page_jlp, confirm_tr
 async def choose_pool(context: BrowserContext, pool_name: str = 'JLP-USDT') -> None:
     # page: Page = context.pages[-1]
     page: Page = await find_page(context, title_name='Home | Meteora')
-    await page.wait_for_load_state('domcontentloaded')
+    # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
     if await page.locator('a:has-text("DLMM")').is_visible():
@@ -26,12 +26,12 @@ async def choose_pool(context: BrowserContext, pool_name: str = 'JLP-USDT') -> N
     if await page.locator('button:has-text("Refresh")').is_visible():
         await page.locator('button:has-text("Refresh")').click()
 
-    await page.wait_for_load_state('domcontentloaded')
+    # await page.wait_for_load_state('domcontentloaded')
     await page.get_by_placeholder('Search by token name, symbol, mint').type(f'{pool_name}')
     await page.get_by_text(f'{pool_name}').nth(0).click()
     await smooth_scroll_with_mouse(page, 300, 100)
     await page.get_by_text(f'{pool_name}').nth(1).click()
-    await page.wait_for_load_state('domcontentloaded')
+    # await page.wait_for_load_state('domcontentloaded')
 
     if await page.locator('button:has-text("Agree, let\'s go")').is_visible():
         await page.locator('button:has-text("Agree, let\'s go")').nth(1).click()
@@ -45,7 +45,7 @@ async def chek_position(context: BrowserContext) -> float | None:
     logger.info('Проверка на наличие открытой позиции')
 
     page: Page = await find_page(context, title_name='JLP-USDT | Meteora', keyword_in_url='dlmm')
-    await page.wait_for_load_state('domcontentloaded')
+    # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
     if await page.locator('button:has-text("Go Back")').is_visible():
@@ -90,7 +90,7 @@ async def chek_position(context: BrowserContext) -> float | None:
 async def swap_in_meteora(context: BrowserContext, jlp_to_usdt: int = None) -> dict | None:
     # page: Page = context.pages[-1]
     page: Page = await find_page(context, title_name='JLP-USDT | Meteora', keyword_in_url='dlmm')
-    await page.wait_for_load_state('domcontentloaded')
+    # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
     if await page.locator('button:has-text("Refresh")').is_visible():
@@ -121,7 +121,7 @@ async def swap_in_meteora(context: BrowserContext, jlp_to_usdt: int = None) -> d
 
     if usdt_swap_value_to_jlp == 0 and swap_data['USDT'] > 1:
         logger.info("Количество USDT не указано. Свапаем весь доступный USDT в JLP.")
-        await page.wait_for_load_state('domcontentloaded')
+        # await page.wait_for_load_state('domcontentloaded')
         await switch_button.click()
         info_tokens = await page.locator('form').nth(0).inner_text()
         positions_tokens = info_tokens.split('\n')
@@ -132,7 +132,7 @@ async def swap_in_meteora(context: BrowserContext, jlp_to_usdt: int = None) -> d
 
     elif usdt_swap_value_to_jlp > swap_data['USDT']:
         logger.info(f"Баланс USDT ({swap_data['USDT']}) меньше указанного вами порога. Свапаем весь USDT в JLP.")
-        await page.wait_for_load_state('domcontentloaded')
+        # await page.wait_for_load_state('domcontentloaded')
         await switch_button.click()
         info_tokens = await page.locator('form').nth(0).inner_text()
         positions_tokens = info_tokens.split('\n')
@@ -176,7 +176,7 @@ async def add_position(context: BrowserContext) -> tuple[float, float, float] | 
     #     page: Page = context.pages[-1]
     # except IndexError:
     page: Page = await find_page(context, title_name='JLP-USDT | Meteora', keyword_in_url='dlmm')
-    await page.wait_for_load_state('domcontentloaded')
+    # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
     if await page.locator('button:has-text("Wallet not connect")').nth(0).is_visible():
@@ -277,12 +277,12 @@ async def close_position(context: BrowserContext) -> bool:
     logger.info('Начали этап закрытия позиции')
     # page: Page = context.pages[-1]
     page: Page = await find_page(context, title_name='JLP-USDT | Meteora', keyword_in_url='dlmm')
-    await page.wait_for_load_state('domcontentloaded')
+    # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
     if await page.locator('button:has-text("Refresh")').is_visible():
         await page.locator('button:has-text("Refresh")').click()
-        await page.wait_for_load_state('domcontentloaded')
+        # await page.wait_for_load_state('domcontentloaded')
 
     await page.locator('span:has-text("Your Positions")').click()
     if await page.locator('span:has-text("USDT per JLP")').nth(0).is_visible():

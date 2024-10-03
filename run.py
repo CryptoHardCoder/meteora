@@ -14,9 +14,10 @@ async def main():
                                                     slow_mo=1800,
                                                     headers=headers)
         context = browser.contexts[0]
-        context.set_default_timeout(60000)
+        # context.set_default_timeout(60000)
         page = await context.new_page()
-        await page.goto('https://meteora.ag/', timeout=60000)
+        page.set_default_navigation_timeout(60000)
+        await page.goto('https://meteora.ag/')
 
         for page in context.pages:
             if page.url == 'https://meteora.ag/':
@@ -67,6 +68,8 @@ async def main():
                     """ниже формула = если цена пойдет в право до половины, то есть поднимется на 95%, 
                                                 бот закрывает позицию """
                     target_price = open_price + 0.95 * (max_price - open_price)
+                    # target_price = open_price + 0.05 * (max_price - open_price)
+
                     target_price = round(target_price, 4)
                     logger.info(f'Текущая цена:{current_price}')
                     logger.info(f"Позиция закроется при превышении: {target_price} или падении ниже: {open_price}.")
