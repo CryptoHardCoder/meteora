@@ -57,6 +57,168 @@ async def get_balance_in_page_jlp(page: Page, step: int, token_name: str, stable
     # print(type(swap_data), swap_data)
     return swap_data
 
+#
+# async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'chrome-extension://') -> bool:
+#     # await asyncio.sleep(2)
+#     wallet_page: Page = await find_page(context, 'Solflare', keyword_in_url=keyword_in_url)
+#
+#     if wallet_page is None:  # иногда не сразу появляется кошелек, для этого небольшой цикл написал
+#         for _ in range(3):
+#             wallet_page: Page = await find_page(context, 'Solflare', keyword_in_url=keyword_in_url)
+#             await asyncio.sleep(5)
+#             if wallet_page is not None:
+#                 break
+#     await wallet_page.wait_for_load_state('domcontentloaded')
+#     await wallet_page.bring_to_front()
+#
+#     if await wallet_page.locator('//*[@id="radix-:r0:"]/div/div/div/div[1]/form/div/div/input').is_visible():  # поля ввода пароля
+#         await wallet_page.locator('//*[@id="radix-:r0:"]/div/div/div/div[1]/form/div/div/input').type(keyword_wallet)  # поля ввода пароля
+#         await wallet_page.locator('//*[@id="radix-:ra:"]/div/div/div/div[1]/form/button').click()  # кнопка разблокировки кошелька
+#
+#     # cancel_button = wallet_page.locator('button:has-text("Отклонить")')
+#     submit_button = wallet_page.locator('/html/body/div[2]/div[2]/div/div[2]/div/div[2]/div[2]/div[2]/button[2]')  # кнопка подтверждения транзы
+#
+#     await wallet_page.wait_for_load_state('domcontentloaded')
+#
+#     if (
+#             await wallet_page.locator('h5:has-text("Simulation failed")').is_visible() or
+#             await wallet_page.locator('h5:has-text("Slippage tolerance exceeded")').is_visible()
+#     ):
+#         await wallet_page.close()
+#         # await cancel_button.click()
+#         logger.error('Транзакцию отклонена. Причина: не удалось получить симуляцию, пробуем через 10сек')
+#         return False
+#
+#     try:
+#         await expect(submit_button).to_be_enabled()
+#         await submit_button.click()
+#         logger.info('Транзакция подтверждена')
+#         return True
+#     except AssertionError:
+#         # await wallet_page.locator('button:has-text("Отклонить")').click()
+#         logger.error(f'Транзакцию отклонена. Причина: кнопка "Утвердить" была не доступна ')
+#         # await expect(cancel_button).to_be_enabled(timeout=20000)
+#         # await cancel_button.click()
+#         await wallet_page.close()
+#         return False
+
+#
+# async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare',
+#                          keyword_in_url: str = 'chrome-extension://') -> bool:
+#     # await asyncio.sleep(2)
+#     wallet_page: Page = await find_page(context, title_name=title_name, keyword_in_url=keyword_in_url)
+#     await wallet_page.wait_for_load_state('domcontentloaded')
+#     await wallet_page.bring_to_front()
+#
+#     try:
+#         if await wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2]').is_visible():  # кнопка подлючиться
+#             await wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2]').click(click_count=2)  # иногда с одного клика
+#             # не срабатывает "подключиться"
+#         else:
+#             await wallet_page.locator('//*[@id="radix-:r0:"]/div/div/div/div[1]/form/div/div/input').type(keyword_wallet)  # поля ввода пароля
+#             await wallet_page.locator('//*[@id="radix-:ra:"]/div/div/div/div[1]/form/button').click()  # кнопка разблокировки кошелька
+#             await expect(wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2]')).to_be_visible()  # кнопка подлючиться
+#             await wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2])').click(click_count=2)  # кнопка подлючиться
+#
+#     except Exception as e:
+#         logger.error(f'Ошибка при вводе пароля: {e}')
+#         return False
+#     return True
+
+
+async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
+    """ Функция получает баланс на странице: Jup.ag. Работает только для трех монет: SOL, USDT, JLP.
+                На прямую с кошелька не берет баланс. Возвращает словарь. """
+    logger.info('Получаем баланс через сайт jup.ag')
+
+    page: Page = await find_page(context, 'Swap | Jupiter', keyword_in_url='jup.ag')
+
+    if page is None or page.url != url_jup:
+        page = await context.new_page()
+        await page.goto(url_jup)
+    await page.wait_for_load_state('domcontentloaded')
+    await page.bring_to_front()
+
+    connect_wallet_button = page.locator('span:has-text("Connect Wallet")').first
+    # connect_wallet_button = page.locator('//*[@id="__next"]/div[2]/div[1]/div/'
+    #                                      'div[4]/div[3]/button') # xpath кнопки Connect wallet
+    if await connect_wallet_button.is_visible():
+        location_menu = await connect_wallet_button.bounding_box()
+        await connect_wallet_button.click()
+    else:
+        try:
+            await jup_connect_wallet(context, page=page)
+            # location_menu = await get_location_menu(page, button_index=1)  # когда функция работает по поиску лого
+            location_menu = await get_location_menu(page=page)  # когда функция работает по xpath
+        except AssertionError:
+            logger.error(f'Словили ошибку: \nПробуем менять индексы')
+            await jup_connect_wallet(context, page=page)
+            # location_menu = await get_location_menu(page, button_index=0)  # когда функция работает по поиску лого
+            location_menu = await get_location_menu(page=page)  # когда функция работает по xpath
+
+    # await page.locator('span:has-text("Your Tokens")').click()
+    # await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/'
+    #                    'div/div[2]').click()  # путь селектора 'Your tokens' содержащий баланс
+    # data = (await page.locator(
+    #     '//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/div/div[2]'
+    # ).inner_text()).split('\n')  # путь селектора 'Your tokens' содержащий баланс
+    # balance_wallet = {
+    #     'SOL': None,
+    #     'JLP': None,
+    #     'USDT': None
+    # }
+    # for i in range(len(data) - 1):
+    #     if 'SOL' in data[i]:
+    #         balance_value = data[i + 1].strip().replace(',', '.')
+    #         if balance_value.replace('.', '', 1).isdigit():
+    #             balance_value = float(balance_value)
+    #             balance_wallet['SOL'] = balance_value
+    #     if 'JLP' in data[i]:
+    #         balance_value = data[i + 1].strip().replace(',', '.')
+    #         if balance_value.replace('.', '', 1).isdigit():
+    #             balance_value = float(balance_value)
+    #             balance_wallet['JLP'] = balance_value
+    #     if 'USDT' in data[i]:
+    #         balance_value = data[i + 1].strip().replace(',', '.')
+    #         if balance_value.replace('.', '', 1).isdigit():
+    #             balance_value = float(balance_value)
+    #             balance_wallet['USDT'] = balance_value
+
+    data = (await page.locator('//*[@id="__next"]/div[2]/div[1]/div[2]/div[2]/div/div[2]/div/div[1]/div').inner_text()).split('\n')
+    # print(data)
+
+    balance_wallet = {
+        'SOL': None,
+        'JLP': None,
+        'USDT': None
+    }
+
+    for i in range(len(data)):
+        if 'Solana' in data[i]:
+            balance_value = data[i + 1].strip().replace('SOL', '').replace(',', '.').strip()
+            if balance_value.replace('.', '', 1).isdigit():
+                balance_value = float(balance_value)
+                balance_wallet['SOL'] = balance_value
+
+        if 'USDT' in data[i]:
+            balance_value = data[i + 1].strip().replace('USDT', '').replace(',', '.').strip()
+            if balance_value.replace('.', '', 1).isdigit():
+                balance_value = float(balance_value)
+                balance_wallet['USDT'] = balance_value
+
+        if 'Jupiter Perps' in data[i]:
+            balance_value = data[i + 1].strip().replace('JLP', '').replace(',', '.').strip()
+            if balance_value.replace('.', '', 1).isdigit():
+                balance_value = float(balance_value)
+                balance_wallet['JLP'] = balance_value
+
+    # print(balance_wallet)
+    logger.info(f'Баланс составляет: {balance_wallet}')
+    await page.mouse.click(location_menu['x'], location_menu['y'])  # нажимаем в меню чтобы скрыт вкладку
+    # await page.close()
+
+    return balance_wallet
+
 
 async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'chrome-extension://') -> bool:
     # await asyncio.sleep(2)
@@ -90,7 +252,7 @@ async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'ch
         return False
 
     try:
-        await expect(submit_button).to_be_enabled(timeout=20000)
+        await expect(submit_button).to_be_enabled()
         await submit_button.click()
         logger.info('Транзакция подтверждена')
         return True
@@ -101,11 +263,6 @@ async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'ch
         # await cancel_button.click()
         await wallet_page.close()
         return False
-
-    # await expect(wallet_page.locator('button:has-text("Утвердить")')).to_be_enabled(timeout=20000)
-    # await wallet_page.locator('button:has-text("Утвердить")').click()
-
-    # return True
 
 
 async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare',
@@ -131,73 +288,11 @@ async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare',
     return True
 
 
-async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
-    """ Функция получает баланс на странице: Jup.ag. Работает только для трех монет: SOL, USDT, JLP.
-                На прямую с кошелька не берет баланс. Возвращает словарь. """
-    logger.info('Получаем баланс через сайт jup.ag')
-
-    page: Page = await find_page(context, 'Swap | Jupiter', keyword_in_url='jup.ag')
-
-    if page is None or page.url != url_jup:
-        page = await context.new_page()
-        await page.goto(url_jup)
-    await page.wait_for_load_state('domcontentloaded')
-    await page.bring_to_front()
-
-    if await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button').is_visible():
-        # print('if')
-        location_menu = await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button').bounding_box()
-        await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button').click()
-    else:
-        try:
-            await jup_connect_wallet(context, page, button_index=1)
-            # location_menu = await get_location_menu(page, button_index=1)  # когда функция работает по поиску лого
-            location_menu = await get_location_menu(page)  # когда функция работает по xpath
-        except AssertionError:
-            logger.error(f'Словили ошибку: \nПробуем менять индексы')
-            await jup_connect_wallet(context, page, button_index=0)
-            # location_menu = await get_location_menu(page, button_index=0)  # когда функция работает по поиску лого
-            location_menu = await get_location_menu(page)  # когда функция работает по xpath
-
-    await page.locator('span:has-text("Your Tokens")').click()
-    data = (await page.locator(
-        '//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/div/div[2]'
-    ).inner_text()).split('\n')  # путь селектора 'Your tokens' содержащий баланс
-
-    balance_wallet = {
-        'SOL': None,
-        'JLP': None,
-        'USDT': None
-    }
-    for i in range(len(data) - 1):
-        if 'SOL' in data[i]:
-            balance_value = data[i + 1].strip().replace(',', '.')
-            if balance_value.replace('.', '', 1).isdigit():
-                balance_value = float(balance_value)
-                balance_wallet['SOL'] = balance_value
-        if 'JLP' in data[i]:
-            balance_value = data[i + 1].strip().replace(',', '.')
-            if balance_value.replace('.', '', 1).isdigit():
-                balance_value = float(balance_value)
-                balance_wallet['JLP'] = balance_value
-        if 'USDT' in data[i]:
-            balance_value = data[i + 1].strip().replace(',', '.')
-            if balance_value.replace('.', '', 1).isdigit():
-                balance_value = float(balance_value)
-                balance_wallet['USDT'] = balance_value
-    # print(balance_wallet)
-    logger.info(f'Баланс составляет: {balance_wallet}')
-    await page.mouse.click(location_menu['x'], location_menu['y'])  # нажимаем в меню чтобы скрыт вкладку
-    # await page.close()
-
-    return balance_wallet
-
-
-async def jup_connect_wallet(context, page: Page, button_index: int):
-    if await page.locator('button:has-text("Connect Wallet")').nth(button_index).is_visible():
-        await page.locator('button:has-text("Connect Wallet")').nth(button_index).click()
-        await page.locator('span:has-text("Solflare")').click(click_count=2)
-        await connect_wallet(context)
+# async def jup_connect_wallet(context, page: Page, button_index: int):
+#     if await page.locator('button:has-text("Connect Wallet")').nth(button_index).is_visible():
+#         await page.locator('button:has-text("Connect Wallet")').nth(button_index).click()
+#         await page.locator('span:has-text("Solflare")').click(click_count=2)
+#         await connect_wallet(context)
 
 
 # async def get_location_menu(page: Page, button_index: int):
@@ -215,10 +310,17 @@ async def jup_connect_wallet(context, page: Page, button_index: int):
 #
 #     return location_menu
 
+
+async def jup_connect_wallet(context, page: Page):
+    # if await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/div/button[2]').is_visible():
+    await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/div/button[2]').click()
+    await page.locator('span:has-text("Solflare")').click(click_count=2)
+    await connect_wallet(context)
+
+
 async def get_location_menu(page: Page):
     location_menu = await page.locator(
         '//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button/div[3]').bounding_box()  # xpath лого кошелька
-    print(location_menu)
     await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button/div[3]').click()  # xpath лого кошелька
 
     return location_menu
