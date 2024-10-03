@@ -14,8 +14,14 @@ async def main():
                                                     slow_mo=1800,
                                                     headers=headers)
         context = browser.contexts[0]
+        context.set_default_timeout(60000)
         page = await context.new_page()
         await page.goto('https://meteora.ag/', timeout=60000)
+
+        for page in context.pages:
+            if page.url == 'https://meteora.ag/':
+                continue
+            await page.close()
 
         # Проверка значения navigator.webdriver:
         # True -> страница видит что браузер запускается с помощью ботов,
@@ -38,6 +44,9 @@ async def main():
                 logger.log('EXCEPTION',
                            f"Критическая ошибка: недостаточно SOL ({balance['SOL']}). "
                            f"Софт будет приостановлен. Пожалуйста, пополните баланс!")
+            else:
+                logger.critical(f"Критическая ошибка: недостаточно SOL ({balance['SOL']}). "
+                                f"Софт приостановлен. Пожалуйста, пополните баланс!")
             return
 
         try:
@@ -68,13 +77,16 @@ async def main():
                     if current_price >= target_price:
                         logger.info("Цена вышла за диапазон. Запущен процесс закрытия позиции")
                         await close_position(context)
-
                         if not await chek_balance_sol(page, context):
                             if params.get('token') is not None and params.get('chat_id') is not None:
                                 logger.log('EXCEPTION',
                                            f"Критическая ошибка: недостаточно SOL ({balance['SOL']}). "
-                                           f"Софт приостановлен. Пожалуйста, пополните баланс!")
-                            break
+                                           f"Софт будет приостановлен. Пожалуйста, пополните баланс!")
+                            else:
+                                logger.critical(f"Критическая ошибка: недостаточно SOL ({balance['SOL']}). "
+                                                f"Софт приостановлен. Пожалуйста, пополните баланс!")
+                                break
+
                         await swap_in_meteora(context)
                         try_add_position = await add_position(context)
                         if try_add_position is not None:
@@ -88,12 +100,16 @@ async def main():
             if params.get('token') is not None and params.get('chat_id') is not None:
                 logger.log("EXCEPTION", f'Возникла не предвиденная ошибка. Софт приостановлен. '
                                         f'Пожалуйста сообщите разрабу!')
-            logger.exception(
-                f'Возникла не предвиденная ошибка: {err}. Софт приостановлен. Пожалуйста сообщите разрабу!')
-        except Error:
+            else:
+                logger.exception(f'Возникла не предвиденная ошибка: {err}. '
+                                 f'Софт приостановлен. Пожалуйста сообщите разрабу!')
+        except Error as e:
             if params.get('token') is not None and params.get('chat_id') is not None:
                 logger.log("EXCEPTION",
                            f'Возникла не предвиденная ошибка. Софт приостановлен. Пожалуйста сообщите разрабу!')
+            else:
+                logger.exception(f'Возникла не предвиденная ошибка: {e}'
+                                 f'Софт приостановлен. Пожалуйста сообщите разрабу!')
         # except playwright._impl._errors
 
 

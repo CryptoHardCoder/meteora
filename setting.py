@@ -3,7 +3,6 @@ from notifiers.logging import NotificationHandler
 
 from fake_useragent import FakeUserAgent
 
-
 adspower_api_url = "скопированный url сюда вставляем/api/v1/browser/start"
 
 adspower_api_key = "ваш API KEY от ADSPOWER"
@@ -19,6 +18,7 @@ usdt_swap_value_to_jlp: float = 0  # !!! Нельзя оставлять пус�
 status_check_interval: int = 60
 
 max_procent = '2.75'  # максимальный процент при открытии позиции
+min_procent = '0'
 
 default_swap_value_for_sol = 5
 

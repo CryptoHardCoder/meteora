@@ -95,7 +95,7 @@ async def chek_balance_sol(page: Page, context: BrowserContext) -> tuple[bool, d
             if await swap_in_jupiter(context, usdt=True):
                 return True, balance
         elif balance['USDT'] < 5 and balance['JLP'] > 2:
-            await page.wait_for_timeout(20000)
+            # await page.wait_for_timeout(20000)
             if await swap_in_jupiter(context, jlp=True):
                 return True, balance
         else:
