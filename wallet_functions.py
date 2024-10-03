@@ -126,12 +126,26 @@ async def get_balance_in_page_jlp(page: Page, step: int, token_name: str, stable
 #     return True
 
 
-async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
+async def get_balance_in_wallet(context: BrowserContext) -> dict:
     """ Функция получает баланс на странице: Jup.ag. Работает только для трех монет: SOL, USDT, JLP.
                 На прямую с кошелька не берет баланс. Возвращает словарь. """
     logger.info('Получаем баланс через сайт jup.ag')
 
     page: Page = await find_page(context, 'Swap | Jupiter', keyword_in_url='jup.ag')
+
+    if page is None:
+        pages = context.pages
+        jup_page = None
+        # Проходим по всем страницам и ищем дубликаты 'jup.ag'
+        for page in pages:
+            if 'jup.ag' in page.url:
+                if jup_page is None:
+                    # Оставляем первую найденную страницу 'jup.ag'
+                    jup_page = page
+                    page = jup_page
+                else:
+                    # Закрываем все остальные страницы с 'jup.ag' если есть такие
+                    await page.close()
 
     if page is None or page.url != url_jup:
         page = await context.new_page()
@@ -147,14 +161,16 @@ async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
         await connect_wallet_button.click()
     else:
         try:
-            await jup_connect_wallet(context, page=page)
-            # location_menu = await get_location_menu(page, button_index=1)  # когда функция работает по поиску лого
-            location_menu = await get_location_menu(page=page)  # когда функция работает по xpath
+            # await jup_connect_wallet(context, page=page)  # когда функция работает по xpath
+            # location_menu = await get_location_menu(page=page)  # когда функция работает по xpath
+            await jup_connect_wallet(context, page=page, button_index=1)  # когда функция работает по поиску лого
+            location_menu = await get_location_menu(page, button_index=1)  # когда функция работает по поиску лого
         except AssertionError:
             logger.error(f'Словили ошибку: \nПробуем менять индексы')
-            await jup_connect_wallet(context, page=page)
-            # location_menu = await get_location_menu(page, button_index=0)  # когда функция работает по поиску лого
-            location_menu = await get_location_menu(page=page)  # когда функция работает по xpath
+            # await jup_connect_wallet(context, page=page)  # когда функция работает по xpath
+            # location_menu = await get_location_menu(page=page)  # когда функция работает по xpath
+            await jup_connect_wallet(context, page=page, button_index=0)
+            location_menu = await get_location_menu(page, button_index=0)  # когда функция работает по поиску лого
 
     # await page.locator('span:has-text("Your Tokens")').click()
     # await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/'
@@ -186,6 +202,7 @@ async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
 
     data = (await page.locator('//*[@id="__next"]/div[2]/div[1]/div[2]/div[2]/div/div[2]/div/div[1]/div').inner_text()).split('\n')
     # print(data)
+    data = [item for item in data if item]
 
     balance_wallet = {
         'SOL': None,
@@ -193,7 +210,7 @@ async def get_balance_in_wallet(page: Page, context: BrowserContext) -> dict:
         'USDT': None
     }
 
-    for i in range(len(data)):
+    for i in range(len(data) - 1):
         if 'Solana' in data[i]:
             balance_value = data[i + 1].strip().replace('SOL', '').replace(',', '.').strip()
             if balance_value.replace('.', '', 1).isdigit():
@@ -288,39 +305,39 @@ async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare',
     return True
 
 
-# async def jup_connect_wallet(context, page: Page, button_index: int):
-#     if await page.locator('button:has-text("Connect Wallet")').nth(button_index).is_visible():
-#         await page.locator('button:has-text("Connect Wallet")').nth(button_index).click()
-#         await page.locator('span:has-text("Solflare")').click(click_count=2)
-#         await connect_wallet(context)
+async def jup_connect_wallet(context, page: Page, button_index: int):
+    if await page.locator('button:has-text("Connect Wallet")').nth(button_index).is_visible():
+        await page.locator('button:has-text("Connect Wallet")').nth(button_index).click()
+        await page.locator('span:has-text("Solflare")').click(click_count=2)
+        await connect_wallet(context)
 
 
-# async def get_location_menu(page: Page, button_index: int):
-#     if await page.get_by_alt_text('Wallet logo').nth(button_index).is_visible():
-#         # print('if logo')
-#         location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
-#         # print(location_menu)
-#         await page.get_by_alt_text('Wallet logo').nth(button_index).click()
-#     else:
-#         await expect(page.get_by_alt_text('Wallet logo').nth(button_index)).to_be_visible()
-#         # print('else logo')
-#         location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
-#         await page.get_by_alt_text('Wallet logo').nth(button_index).click()
-#         # print(location_menu)
-#
-#     return location_menu
-
-
-async def jup_connect_wallet(context, page: Page):
-    # if await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/div/button[2]').is_visible():
-    await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/div/button[2]').click()
-    await page.locator('span:has-text("Solflare")').click(click_count=2)
-    await connect_wallet(context)
-
-
-async def get_location_menu(page: Page):
-    location_menu = await page.locator(
-        '//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button/div[3]').bounding_box()  # xpath лого кошелька
-    await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button/div[3]').click()  # xpath лого кошелька
+async def get_location_menu(page: Page, button_index: int):
+    if await page.get_by_alt_text('Wallet logo').nth(button_index).is_visible():
+        # print('if logo')
+        location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
+        # print(location_menu)
+        await page.get_by_alt_text('Wallet logo').nth(button_index).click()
+    else:
+        await expect(page.get_by_alt_text('Wallet logo').nth(button_index)).to_be_visible()
+        # print('else logo')
+        location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
+        await page.get_by_alt_text('Wallet logo').nth(button_index).click()
+        # print(location_menu)
 
     return location_menu
+
+#
+# async def jup_connect_wallet(context, page: Page):
+#     # if await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/div/button[2]').is_visible():
+#     await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/div/button[2]').click()
+#     await page.locator('span:has-text("Solflare")').click(click_count=2)
+#     await connect_wallet(context)
+#
+#
+# async def get_location_menu(page: Page):
+#     location_menu = await page.locator(
+#         '//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button/div[3]').bounding_box()  # xpath лого кошелька
+#     await page.locator('//*[@id="__next"]/div[2]/div[1]/div/div[4]/div[3]/button/div[3]').click()  # xpath лого кошелька
+#
+#     return location_menu
