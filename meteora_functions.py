@@ -3,13 +3,13 @@ from playwright.async_api import BrowserContext, Page
 
 
 from functions import smooth_scroll_with_mouse, find_page
-from setting import usdt_swap_value_to_jlp, max_procent, min_procent, logger, params
+from setting import usdt_swap_value_to_jlp, max_procent, logger, params, min_procent
 from wallet_functions import connect_wallet, get_balance_in_page_jlp, confirm_transaction
 
 
 async def choose_pool(context: BrowserContext, pool_name: str = 'JLP-USDT') -> None:
     # page: Page = context.pages[-1]
-    page: Page = await find_page(context, title_name='Home | Meteora', keyword_in_url='dlmm')
+    page: Page = await find_page(context, title_name='Home | Meteora')
     await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
@@ -42,8 +42,7 @@ async def choose_pool(context: BrowserContext, pool_name: str = 'JLP-USDT') -> N
 async def chek_position(context: BrowserContext) -> float | None:
     """ Функция проверяет на наличие открытой позиции. Если есть открытая позиция, то возвращает (float) актуальную цену.
                                         Если нет, возвращает None"""
-    if params.get('token') is not None and params.get('chat_id') is not None:
-        logger.info('Проверка на наличие открытой позиции')
+    logger.info('Проверка на наличие открытой позиции')
 
     page: Page = await find_page(context, title_name='JLP-USDT | Meteora', keyword_in_url='dlmm')
     await page.wait_for_load_state('domcontentloaded')
@@ -51,16 +50,15 @@ async def chek_position(context: BrowserContext) -> float | None:
 
     if await page.locator('button:has-text("Go Back")').is_visible():
         await page.locator('button:has-text("Go Back")').click()
-        logger.info('Открытая позиция не обнаружена')
-        return None
+        # logger.info('Открытая позиция не обнаружена')
+
+    if await page.locator('button:has-text("Refresh")').is_visible():
+        await page.locator('button:has-text("Refresh")').click()
 
     if await page.get_by_alt_text('warning').is_visible():
         logger.warning('На сайте увидел "WARNING". Расхождение цены очень большая. Ждем 2 минуты')
         await asyncio.sleep(120)
         return None
-
-    if await page.locator('button:has-text("Refresh")').is_visible():
-        await page.locator('button:has-text("Refresh")').click()
 
     if await page.locator('button', has_text='Connecting...').nth(0).is_visible():
         await connect_wallet(context=context)
@@ -71,21 +69,16 @@ async def chek_position(context: BrowserContext) -> float | None:
         await connect_wallet(context=context)
 
     await page.locator('span:has-text("Your Positions")').nth(0).click()
+
+    if await page.locator('span:has-text("No Positions Found")').is_visible():
+        logger.info("Открытых позиций не обнаружено.")
+        return None
+
     if await page.locator('span:has-text("USDT per JLP")').is_visible():
         await page.locator('span:has-text("USDT per JLP")').scroll_into_view_if_needed()
         logger.info('Найдена открытая позиция')
         buttons = await page.locator('button').all_inner_texts()  # актуальный курс вытаскиваем
         # spans = await page.locator('span').all_inner_texts()  # рейдж цены открытой позиции
-        # # spans = set(spans)
-        # price_range = None
-        # for i in range(len(spans)):
-        #     if 'Your Liquidity' in spans[i]:
-        #         price_range = spans[i + 2]
-        # min_price = float(price_range.split('-')[0].strip())
-        # max_price = float(price_range.split('-')[1].strip())
-
-        # print(price_range, max_price, min_price, sep='\n')
-
         buttons_data = list(filter(None, buttons))
         button_with_price: str = buttons_data[1]
         price = button_with_price.split('\n')
@@ -274,7 +267,7 @@ async def add_position(context: BrowserContext) -> tuple[float, float, float] | 
                 if await confirm_transaction(context):
                     break
 
-        logger.info(f'Ликвидность добавлена в рейндже {min_price} - {max_price}')
+        # logger.info(f'Ликвидность добавлена в рейндже {min_price} - {max_price}')
         logger.log("POSITION", f'Ликвидность добавлена в рейндже {min_price} - {max_price}')
         await page.wait_for_timeout(30000)  # для подгрузки данных о добавленнной позиции
     return open_price, max_price, min_price
@@ -310,15 +303,15 @@ async def close_position(context: BrowserContext) -> bool:
             await page.get_by_text('Withdraw', exact=True).click()
             if await page.get_by_role('alert').nth(0).is_visible():
                 if await confirm_transaction(context):
-                    logger.debug('закрытие позиции break in else if помогло')
                     break
             else:
                 await close_position_button.click()
                 if await confirm_transaction(context):
                     break
+
         await page.wait_for_timeout(30000)  # для подгрузки данных страницы после закрытия позиции и
         # ждем возврата залоговый 0.056 SOL
-        logger.info('Позиция закрыта')
+        # logger.info('Позиция закрыта')
         logger.log('CLOSE_POSITION', 'Предыдущая позиция закрыта')
         return True
     elif await page.locator('span:has-text("No Positions Found")').is_visible():

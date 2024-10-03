@@ -94,7 +94,7 @@ async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'ch
         await submit_button.click()
         logger.info('Транзакция подтверждена')
         return True
-    except AssertionError as e:
+    except AssertionError:
         # await wallet_page.locator('button:has-text("Отклонить")').click()
         logger.error(f'Транзакцию отклонена. Причина: кнопка "Утвердить" была не доступна ')
         # await expect(cancel_button).to_be_enabled(timeout=20000)
