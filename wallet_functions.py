@@ -57,74 +57,6 @@ async def get_balance_in_page_jlp(page: Page, step: int, token_name: str, stable
     # print(type(swap_data), swap_data)
     return swap_data
 
-#
-# async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'chrome-extension://') -> bool:
-#     # await asyncio.sleep(2)
-#     wallet_page: Page = await find_page(context, 'Solflare', keyword_in_url=keyword_in_url)
-#
-#     if wallet_page is None:  # иногда не сразу появляется кошелек, для этого небольшой цикл написал
-#         for _ in range(3):
-#             wallet_page: Page = await find_page(context, 'Solflare', keyword_in_url=keyword_in_url)
-#             await asyncio.sleep(5)
-#             if wallet_page is not None:
-#                 break
-#     await wallet_page.wait_for_load_state('domcontentloaded')
-#     await wallet_page.bring_to_front()
-#
-#     if await wallet_page.locator('//*[@id="radix-:r0:"]/div/div/div/div[1]/form/div/div/input').is_visible():  # поля ввода пароля
-#         await wallet_page.locator('//*[@id="radix-:r0:"]/div/div/div/div[1]/form/div/div/input').type(keyword_wallet)  # поля ввода пароля
-#         await wallet_page.locator('//*[@id="radix-:ra:"]/div/div/div/div[1]/form/button').click()  # кнопка разблокировки кошелька
-#
-#     # cancel_button = wallet_page.locator('button:has-text("Отклонить")')
-#     submit_button = wallet_page.locator('/html/body/div[2]/div[2]/div/div[2]/div/div[2]/div[2]/div[2]/button[2]')  # кнопка подтверждения транзы
-#
-#     await wallet_page.wait_for_load_state('domcontentloaded')
-#
-#     if (
-#             await wallet_page.locator('h5:has-text("Simulation failed")').is_visible() or
-#             await wallet_page.locator('h5:has-text("Slippage tolerance exceeded")').is_visible()
-#     ):
-#         await wallet_page.close()
-#         # await cancel_button.click()
-#         logger.error('Транзакцию отклонена. Причина: не удалось получить симуляцию, пробуем через 10сек')
-#         return False
-#
-#     try:
-#         await expect(submit_button).to_be_enabled()
-#         await submit_button.click()
-#         logger.info('Транзакция подтверждена')
-#         return True
-#     except AssertionError:
-#         # await wallet_page.locator('button:has-text("Отклонить")').click()
-#         logger.error(f'Транзакцию отклонена. Причина: кнопка "Утвердить" была не доступна ')
-#         # await expect(cancel_button).to_be_enabled(timeout=20000)
-#         # await cancel_button.click()
-#         await wallet_page.close()
-#         return False
-
-#
-# async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare',
-#                          keyword_in_url: str = 'chrome-extension://') -> bool:
-#     # await asyncio.sleep(2)
-#     wallet_page: Page = await find_page(context, title_name=title_name, keyword_in_url=keyword_in_url)
-#     await wallet_page.wait_for_load_state('domcontentloaded')
-#     await wallet_page.bring_to_front()
-#
-#     try:
-#         if await wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2]').is_visible():  # кнопка подлючиться
-#             await wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2]').click(click_count=2)  # иногда с одного клика
-#             # не срабатывает "подключиться"
-#         else:
-#             await wallet_page.locator('//*[@id="radix-:r0:"]/div/div/div/div[1]/form/div/div/input').type(keyword_wallet)  # поля ввода пароля
-#             await wallet_page.locator('//*[@id="radix-:ra:"]/div/div/div/div[1]/form/button').click()  # кнопка разблокировки кошелька
-#             await expect(wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2]')).to_be_visible()  # кнопка подлючиться
-#             await wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2])').click(click_count=2)  # кнопка подлючиться
-#
-#     except Exception as e:
-#         logger.error(f'Ошибка при вводе пароля: {e}')
-#         return False
-#     return True
-
 
 async def get_balance_in_wallet(context: BrowserContext) -> dict:
     """ Функция получает баланс на странице: Jup.ag. Работает только для трех монет: SOL, USDT, JLP.
@@ -326,6 +258,77 @@ async def get_location_menu(page: Page, button_index: int):
         # print(location_menu)
 
     return location_menu
+
+
+
+#
+# async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'chrome-extension://') -> bool:
+#     # await asyncio.sleep(2)
+#     wallet_page: Page = await find_page(context, 'Solflare', keyword_in_url=keyword_in_url)
+#
+#     if wallet_page is None:  # иногда не сразу появляется кошелек, для этого небольшой цикл написал
+#         for _ in range(3):
+#             wallet_page: Page = await find_page(context, 'Solflare', keyword_in_url=keyword_in_url)
+#             await asyncio.sleep(5)
+#             if wallet_page is not None:
+#                 break
+#     await wallet_page.wait_for_load_state('domcontentloaded')
+#     await wallet_page.bring_to_front()
+#
+#     if await wallet_page.locator('//*[@id="radix-:r0:"]/div/div/div/div[1]/form/div/div/input').is_visible():  # поля ввода пароля
+#         await wallet_page.locator('//*[@id="radix-:r0:"]/div/div/div/div[1]/form/div/div/input').type(keyword_wallet)  # поля ввода пароля
+#         await wallet_page.locator('//*[@id="radix-:ra:"]/div/div/div/div[1]/form/button').click()  # кнопка разблокировки кошелька
+#
+#     # cancel_button = wallet_page.locator('button:has-text("Отклонить")')
+#     submit_button = wallet_page.locator('/html/body/div[2]/div[2]/div/div[2]/div/div[2]/div[2]/div[2]/button[2]')  # кнопка подтверждения транзы
+#
+#     await wallet_page.wait_for_load_state('domcontentloaded')
+#
+#     if (
+#             await wallet_page.locator('h5:has-text("Simulation failed")').is_visible() or
+#             await wallet_page.locator('h5:has-text("Slippage tolerance exceeded")').is_visible()
+#     ):
+#         await wallet_page.close()
+#         # await cancel_button.click()
+#         logger.error('Транзакцию отклонена. Причина: не удалось получить симуляцию, пробуем через 10сек')
+#         return False
+#
+#     try:
+#         await expect(submit_button).to_be_enabled()
+#         await submit_button.click()
+#         logger.info('Транзакция подтверждена')
+#         return True
+#     except AssertionError:
+#         # await wallet_page.locator('button:has-text("Отклонить")').click()
+#         logger.error(f'Транзакцию отклонена. Причина: кнопка "Утвердить" была не доступна ')
+#         # await expect(cancel_button).to_be_enabled(timeout=20000)
+#         # await cancel_button.click()
+#         await wallet_page.close()
+#         return False
+
+#
+# async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare',
+#                          keyword_in_url: str = 'chrome-extension://') -> bool:
+#     # await asyncio.sleep(2)
+#     wallet_page: Page = await find_page(context, title_name=title_name, keyword_in_url=keyword_in_url)
+#     await wallet_page.wait_for_load_state('domcontentloaded')
+#     await wallet_page.bring_to_front()
+#
+#     try:
+#         if await wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2]').is_visible():  # кнопка подлючиться
+#             await wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2]').click(click_count=2)  # иногда с одного клика
+#             # не срабатывает "подключиться"
+#         else:
+#             await wallet_page.locator('//*[@id="radix-:r0:"]/div/div/div/div[1]/form/div/div/input').type(keyword_wallet)  # поля ввода пароля
+#             await wallet_page.locator('//*[@id="radix-:ra:"]/div/div/div/div[1]/form/button').click()  # кнопка разблокировки кошелька
+#             await expect(wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2]')).to_be_visible()  # кнопка подлючиться
+#             await wallet_page.locator('/html/body/div[2]/div[2]/div/div[3]/div/button[2])').click(click_count=2)  # кнопка подлючиться
+#
+#     except Exception as e:
+#         logger.error(f'Ошибка при вводе пароля: {e}')
+#         return False
+#     return True
+
 
 #
 # async def jup_connect_wallet(context, page: Page):
