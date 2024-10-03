@@ -33,7 +33,7 @@ async def choose_pool(context: BrowserContext, pool_name: str = 'JLP-USDT') -> N
     await page.get_by_text(f'{pool_name}').nth(1).click()
     # await page.wait_for_load_state('domcontentloaded')
 
-    if await page.locator('button:has-text("Agree, let\'s go")').is_visible():
+    if await page.locator('button:has-text("Agree, let\'s go")').nth(1).is_visible():
         await page.locator('button:has-text("Agree, let\'s go")').nth(1).click()
 
     return None
@@ -44,7 +44,7 @@ async def chek_position(context: BrowserContext) -> float | None:
                                         Если нет, возвращает None"""
     logger.info('Проверка на наличие открытой позиции')
 
-    page: Page = await find_page(context, title_name='JLP-USDT | Meteora', keyword_in_url='dlmm')
+    page: Page = await find_page(context, title_name='JLP-USDT|Meteora', keyword_in_url='dlmm')
     # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
@@ -93,9 +93,6 @@ async def swap_in_meteora(context: BrowserContext, jlp_to_usdt: int = None) -> d
     # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
-    if await page.locator('button:has-text("Refresh")').is_visible():
-        await page.locator('button:has-text("Refresh")').click()
-
     # if page.url != page_jlp:
     #     await page.goto(page_jlp)
     if await page.locator('span:has-text("Connect Wallet")').nth(0).is_visible():
@@ -103,8 +100,7 @@ async def swap_in_meteora(context: BrowserContext, jlp_to_usdt: int = None) -> d
         await page.locator('button:has-text("Solflare")').click()
         await connect_wallet(context=context)
 
-    await page.locator('//*[@id="__next"]/div[1]/div[3]/div/div[2]/div/div[2]/'
-                       'div[2]/div[1]/div[1]/div[3]/span').click()  # xpath кнопки SWAP
+    await page.locator('span:has-text("Swap")').nth(0).click()
     await page.locator('button:has-text("Swap")').nth(0).scroll_into_view_if_needed()
 
     first_input_place = page.locator('input').nth(0)

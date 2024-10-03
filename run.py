@@ -36,7 +36,6 @@ async def main():
 
         while await chek_position(context):
             await close_position(context)
-            await asyncio.sleep(30)  # долго подгружаются данные после открытия и закрытия позиций
             break
 
         chek_result, balance = await chek_balance_sol(page, context)
@@ -59,8 +58,6 @@ async def main():
                     try_add_position = await add_position(context)
                     if try_add_position is not None:
                         open_price, max_price, min_price = try_add_position
-                        # await page.wait_for_timeout(20000)
-                        await asyncio.sleep(20)  # для загрузки сайта после добавления первой ликвы
 
                 else:
                     current_price = chek_position_result
@@ -72,7 +69,8 @@ async def main():
 
                     target_price = round(target_price, 4)
                     logger.info(f'Текущая цена:{current_price}')
-                    logger.info(f"Позиция закроется при превышении: {target_price} или падении ниже: {open_price}.")
+                    # logger.info(f"Позиция закроется при превышении: {target_price} или падении ниже: {open_price}.")
+                    logger.info(f"Позиция закроется при превышении: {target_price}")
                     # """ниже формула = если цена приближается к минимальной цене на 90% бот закрывает позицию"""
                     # closure_price = min_price + 0.1 * (current_price - min_price)
 

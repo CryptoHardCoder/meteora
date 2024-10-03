@@ -84,7 +84,7 @@ async def swap_in_jupiter(context: BrowserContext, usdt: bool = False, jlp: bool
 
 
 async def chek_balance_sol(page: Page, context: BrowserContext) -> tuple[bool, dict]:
-    balance: dict = await get_balance_in_wallet(page, context)
+    balance: dict = await get_balance_in_wallet(context)
 
     """Sol при открытии позиции изымается залоговая сумма в размере 0.056 SOl(при закрытии позиции 
     возвращается), остальные на оплату газа нужны, а меньше 5 USDT нет смысла ходит свапат"""
