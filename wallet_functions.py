@@ -1,6 +1,6 @@
 import asyncio
 
-from playwright.async_api import BrowserContext, Page, expect
+from playwright.async_api import BrowserContext, Page, expect, TimeoutError
 from setting import keyword_wallet, url_jup, logger
 from functions import find_page
 
@@ -82,7 +82,6 @@ async def get_balance_in_wallet(context: BrowserContext) -> dict:
     if page is None or page.url != url_jup:
         page = await context.new_page()
         await page.goto(url_jup)
-    # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
     connect_wallet_button = page.locator('span:has-text("Connect Wallet")').first
@@ -179,7 +178,6 @@ async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'ch
             await asyncio.sleep(5)
             if wallet_page is not None:
                 break
-    # await wallet_page.wait_for_load_state('domcontentloaded')
     await wallet_page.bring_to_front()
 
     if await wallet_page.locator('h4:has-text("Укажите пароль")').is_visible():
@@ -189,7 +187,6 @@ async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'ch
     # cancel_button = wallet_page.locator('button:has-text("Отклонить")')
     submit_button = wallet_page.locator('button:has-text("Утвердить")')
 
-    # await wallet_page.wait_for_load_state('domcontentloaded')
 
     if (
             await wallet_page.locator('h5:has-text("Simulation failed")').is_visible() or
@@ -207,9 +204,10 @@ async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'ch
         return True
     except AssertionError:
         # await wallet_page.locator('button:has-text("Отклонить")').click()
-        logger.error(f'Транзакцию отклонена. Причина: кнопка "Утвердить" была не доступна ')
-        # await expect(cancel_button).to_be_enabled(timeout=20000)
-        # await cancel_button.click()
+        logger.exception(f'Транзакцию отклонена. Причина: кнопка "Утвердить" была не доступна ')
+        await wallet_page.close()
+    except TimeoutError:
+        logger.exception(f'Транзакцию отклонена. Причина: кнопка "Утвердить" была не доступна ')
         await wallet_page.close()
         return False
 
@@ -218,7 +216,6 @@ async def connect_wallet(context: BrowserContext, title_name: str = 'Solflare',
                          keyword_in_url: str = 'chrome-extension://') -> bool:
     # await asyncio.sleep(2)
     wallet_page: Page = await find_page(context, title_name=title_name, keyword_in_url=keyword_in_url)
-    # await wallet_page.wait_for_load_state('domcontentloaded')
     await wallet_page.bring_to_front()
 
     try:
@@ -246,16 +243,12 @@ async def jup_connect_wallet(context, page: Page, button_index: int):
 
 async def get_location_menu(page: Page, button_index: int):
     if await page.get_by_alt_text('Wallet logo').nth(button_index).is_visible():
-        # print('if logo')
         location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
-        # print(location_menu)
         await page.get_by_alt_text('Wallet logo').nth(button_index).click()
     else:
         await expect(page.get_by_alt_text('Wallet logo').nth(button_index)).to_be_visible()
-        # print('else logo')
         location_menu = await page.get_by_alt_text('Wallet logo').nth(button_index).bounding_box()
         await page.get_by_alt_text('Wallet logo').nth(button_index).click()
-        # print(location_menu)
 
     return location_menu
 

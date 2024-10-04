@@ -9,13 +9,7 @@ from functions import find_page
 async def swap_in_jupiter(context: BrowserContext, usdt: bool = False, jlp: bool = False) -> bool:
     # try:
     page: Page = await find_page(context, 'Swap | Jupiter', keyword_in_url='jup.ag')
-    # except Exception as e:
-    #     logger.error(f'Словили ошибку: {e} '
-    #                  'Не удалось найти страницу Jup.ag, открываем новую страницу')
-    #     page: Page = await context.new_page()
-    #     await page.goto(url_jup)
 
-    # await page.wait_for_load_state('domcontentloaded')
     await page.bring_to_front()
 
     if (
@@ -59,7 +53,6 @@ async def swap_in_jupiter(context: BrowserContext, usdt: bool = False, jlp: bool
             await page.get_by_placeholder('Search by token or paste address').type('JLP')
             await page.locator('p:has-text("Jupiter Perps")').click()
 
-        # await page.wait_for_load_state('domcontentloaded')
         await first_input_place.type('2')
         logger.info(f'USDT для свапа не было, cвапаем 2 JLP в SOL')
 
@@ -73,7 +66,6 @@ async def swap_in_jupiter(context: BrowserContext, usdt: bool = False, jlp: bool
             logger.error('Через 10сек попробуем еще раз')
             await asyncio.sleep(10)
             await page.locator('button[type="submit"]').click()
-            # await expect(page).to_have_title('Solflare')
             if await confirm_transaction(context):
                 logger.debug('swap_in_jupiter in else break')
                 break

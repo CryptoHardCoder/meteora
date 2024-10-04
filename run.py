@@ -14,7 +14,7 @@ async def main():
                                                     slow_mo=1800,
                                                     headers=headers)
         context = browser.contexts[0]
-        # context.set_default_timeout(60000)
+        context.set_default_timeout(60000)
         page = await context.new_page()
         page.set_default_navigation_timeout(60000)
         await page.goto('https://meteora.ag/')
@@ -111,7 +111,6 @@ async def main():
             else:
                 logger.exception(f'Возникла не предвиденная ошибка: {e}'
                                  f'Софт приостановлен. Пожалуйста сообщите разрабу!')
-        # except playwright._impl._errors
 
 
 asyncio.run(main())
