@@ -17,10 +17,10 @@ async def main():
         context.set_default_timeout(60000)
         page = await context.new_page()
         page.set_default_navigation_timeout(60000)
-        await page.goto('https://meteora.ag/')
+        await page.goto('https://app.meteora.ag/')
 
         for page in context.pages:
-            if page.url == 'https://meteora.ag/':
+            if page.url == 'https://app.meteora.ag/':
                 continue
             await page.close()
 
@@ -29,8 +29,6 @@ async def main():
         # False -> значит не видит, страница думает что мы человек)
         is_webdriver = await page.evaluate("navigator.webdriver")
         # print(f'navigator.webdriver: {is_webdriver}')
-
-        await page.get_by_text('Launch App').nth(0).click()
 
         await choose_pool(context)
 
