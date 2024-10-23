@@ -82,7 +82,7 @@ async def chek_position(context: BrowserContext) -> float | None:
         return current_price
 
 
-async def swap_in_meteora(context: BrowserContext, jlp_to_usdt: int = None) -> dict | None:
+async def swap_in_meteora(context: BrowserContext) -> dict | None:
     # page: Page = context.pages[-1]
     page: Page = await find_page(context, title_name='JLP-USDT | Meteora', keyword_in_url='dlmm')
     await page.bring_to_front()
@@ -211,8 +211,16 @@ async def add_position(context: BrowserContext) -> tuple[float, float, float] | 
         if await add_luquidity_button.is_disabled():
             await page.get_by_placeholder('0.00').nth(0).scroll_into_view_if_needed()
             await page.get_by_placeholder('0.00').nth(0).clear()
-            await page.locator('//*[@id="__next"]/div[1]/div[5]/div/div[2]/div/div[2]/div[2]/'
-                               'div[2]/form/div[1]/div[1]/div/div/button/div').click()
+            if await page.locator('//*[@id="__next"]/div[1]/div[3]/div/div[2]/div/div[2]/div[2]/div[2]/form/div['
+                                  '1]/div[1]/div/div/button').is_visible():
+                await page.locator('//*[@id="__next"]/div[1]/div[3]/div/div[2]/div/div[2]/div[2]'
+                                   '/div[2]/form/div[1]/div[1]/div/div/button').click()
+            else:
+                await page.locator('//*[@id="__next"]/div[1]/div[5]/div/div[2]/div/div[2]/div[2]'
+                                   '/div[2]/form/div[1]/div[1]/div/div/button').click()
+            # await page.locator('//*[@id="__next"]/div[1]/div[5]/div/div[2]/div/div[2]/div[2]/'
+            #                    'div[2]/form/div[1]/div[1]/div/div/button/div').click()
+
             # await page.("button + span:has-text('Auto-Fill')").click(click_count=2)
             # await page.locator("button + span:has-text('Auto-Fill')").click(click_count=2)
             # await page.locator('//*[@id="__next"]/div[1]/div[5]/div/div[2]/div/div[2]/div[2]'

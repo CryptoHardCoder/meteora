@@ -131,7 +131,10 @@ async def get_balance_in_wallet(context: BrowserContext) -> dict:
     #             balance_value = float(balance_value)
     #             balance_wallet['USDT'] = balance_value
 
-    data = (await page.locator('//*[@id="__next"]/div[2]/div[1]/div[2]/div[2]/div/div[2]/div/div[1]/div').inner_text()).split('\n')
+    # data = (await page.locator(
+        # '//*[@id="__next"]/div[2]/div[1]/div[2]/div[2]/div/div[2]/div/div[1]/div').inner_text()).split('\n')
+    data = (await page.locator('//*[@id="__next"]/div[2]/div[1]/div[2]/div[2]/'
+                               'div/div[3]/div/div[1]/div/div[3]').inner_text()).split('\n')
     # print(data)
     data = [item for item in data if item]
 
@@ -186,7 +189,6 @@ async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'ch
 
     # cancel_button = wallet_page.locator('button:has-text("Отклонить")')
     submit_button = wallet_page.locator('button:has-text("Утвердить")')
-
 
     if (
             await wallet_page.locator('h5:has-text("Simulation failed")').is_visible() or
@@ -251,8 +253,6 @@ async def get_location_menu(page: Page, button_index: int):
         await page.get_by_alt_text('Wallet logo').nth(button_index).click()
 
     return location_menu
-
-
 
 #
 # async def confirm_transaction(context: BrowserContext, keyword_in_url: str = 'chrome-extension://') -> bool:
