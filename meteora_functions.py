@@ -28,8 +28,12 @@ async def choose_pool(context: BrowserContext, pool_name: str = 'JLP-USDT') -> N
     await page.get_by_text(f'{pool_name}').nth(0).click()
     await smooth_scroll_with_mouse(page, 300, 100)
     # await page.get_by_text(f'{pool_name}').nth(1).click()
-    await page.locator('//*[@id="__next"]/div[1]/div[3]/div/div[2]/div[2]/'
-                       'div/div[4]/div/div[1]/div/div/div/div[2]/div[2]/a[1]').click()
+    try:
+        await page.locator('//*[@id="__next"]/div[1]/div[3]/div/div[2]/div[2]/'
+                           'div/div[4]/div/div[1]/div/div/div/div[2]/div[2]/a[1]').click()
+    except TimeoutError:
+        await page.locator('//*[@id="__next"]/div[1]/div[5]/div/div[2]/div[2]'
+                           '/div/div[4]/div/div[1]/div/div/div/div[2]/div[2]/a[1]').click()
 
     if await page.locator('button:has-text("Agree, let\'s go")').nth(1).is_visible():
         await page.locator('button:has-text("Agree, let\'s go")').nth(1).click()
@@ -226,7 +230,7 @@ async def add_position(context: BrowserContext) -> tuple[float, float, float] | 
             # await page.("button + span:has-text('Auto-Fill')").click(click_count=2)
             # await page.locator("button + span:has-text('Auto-Fill')").click(click_count=2)
             # await page.locator('//*[@id="__next"]/div[1]/div[5]/div/div[2]/div/div[2]/div[2]'
-                               # '/div[2]/form/div[1]/div[1]/div/div').click(click_count=2)
+            # '/div[2]/form/div[1]/div[1]/div/div').click(click_count=2)
             # await page.locator('//*[@id="__next"]/div[1]/div[5]/div/div[2]/div/div[2]/div[2]/'
             #                    'div[2]/form/div[1]/div[1]/div/div/button').click(click_count=2)  # xpath кнопки Auto-fill
             await page.locator(f'span:has-text("{add_position_balance["JLP"]}")').click()  # нажимает на кнопку с
