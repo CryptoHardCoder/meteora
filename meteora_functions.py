@@ -27,7 +27,9 @@ async def choose_pool(context: BrowserContext, pool_name: str = 'JLP-USDT') -> N
     await page.get_by_placeholder('Search by token name, symbol, mint').type(f'{pool_name}')
     await page.get_by_text(f'{pool_name}').nth(0).click()
     await smooth_scroll_with_mouse(page, 300, 100)
-    await page.get_by_text(f'{pool_name}').nth(1).click()
+    # await page.get_by_text(f'{pool_name}').nth(1).click()
+    await page.locator('//*[@id="__next"]/div[1]/div[3]/div/div[2]/div[2]/'
+                       'div/div[4]/div/div[1]/div/div/div/div[2]/div[2]/a[1]').click()
 
     if await page.locator('button:has-text("Agree, let\'s go")').nth(1).is_visible():
         await page.locator('button:has-text("Agree, let\'s go")').nth(1).click()

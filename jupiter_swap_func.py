@@ -7,7 +7,7 @@ from functions import find_page
 
 
 async def swap_in_jupiter(context: BrowserContext, usdt: bool = False, jlp: bool = False) -> bool:
-    # try:
+
     page: Page = await find_page(context, 'Swap | Jupiter', keyword_in_url='jup.ag')
 
     await page.bring_to_front()
@@ -87,7 +87,6 @@ async def chek_balance_sol(page: Page, context: BrowserContext) -> tuple[bool, d
             if await swap_in_jupiter(context, usdt=True):
                 return True, balance
         elif balance['USDT'] < 5 and balance['JLP'] > 2:
-            # await page.wait_for_timeout(20000)
             if await swap_in_jupiter(context, jlp=True):
                 return True, balance
         else:

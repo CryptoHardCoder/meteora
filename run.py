@@ -17,12 +17,13 @@ async def main():
         context.set_default_timeout(60000)
         page = await context.new_page()
         page.set_default_navigation_timeout(60000)
-        await page.goto('https://app.meteora.ag/')
 
         for page in context.pages:
             if page.url == 'https://app.meteora.ag/':
                 continue
             await page.close()
+
+        await page.goto('https://app.meteora.ag/')
 
         # Проверка значения navigator.webdriver:
         # True -> страница видит что браузер запускается с помощью ботов,
@@ -62,8 +63,8 @@ async def main():
 
                     """ниже формула = если цена пойдет в право до половины, то есть поднимется на 95%, 
                                                 бот закрывает позицию """
-                    # target_price = open_price + 0.95 * (max_price - open_price)
-                    target_price = open_price + 0.05 * (max_price - open_price)
+                    target_price = open_price + 0.95 * (max_price - open_price)
+                    # target_price = open_price + 0.05 * (max_price - open_price)
 
                     target_price = round(target_price, 4)
                     logger.info(f'Текущая цена:{current_price}')
@@ -72,8 +73,8 @@ async def main():
                     # """ниже формула = если цена приближается к минимальной цене на 90% бот закрывает позицию"""
                     # closure_price = min_price + 0.1 * (current_price - min_price)
 
-                    if current_price >= target_price or current_price < open_price:
-                    # if current_price >= target_price:
+                    # if current_price >= target_price or current_price < open_price:
+                    if current_price >= target_price:
                         logger.info("Цена вышла за диапазон. Запущен процесс закрытия позиции")
                         await close_position(context)
                         if not await chek_balance_sol(page, context):
@@ -98,7 +99,7 @@ async def main():
         except Exception as err:
             if params.get('token') is not None and params.get('chat_id') is not None:
                 logger.log("EXCEPTION", f'Возникла не предвиденная ошибка. Софт приостановлен. '
-                                        f'Пожалуйста сообщите разрабу!')
+                                        f'Пожалуйста сообщите разрабу! {err}')
                 logger.exception(f'Возникла не предвиденная ошибка: {err}. '
                                  f'Софт приостановлен. Пожалуйста сообщите разрабу!')
             else:
@@ -107,7 +108,7 @@ async def main():
         except Error as e:
             if params.get('token') is not None and params.get('chat_id') is not None:
                 logger.log("EXCEPTION",
-                           f'Возникла не предвиденная ошибка. Софт приостановлен. Пожалуйста сообщите разрабу!')
+                           f'Возникла не предвиденная ошибка. Софт приостановлен. Пожалуйста сообщите разрабу! {e}')
                 logger.exception(f'Возникла не предвиденная ошибка: {e}'
                                  f'Софт приостановлен. Пожалуйста сообщите разрабу!')
             else:
